@@ -126,16 +126,8 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update && sudo apt upgrade -y
-          sudo apt install -y python3 git curl jq
-               
-      - name: Install buildozer and fix missing modules
-        run: |
-          curl -LO https://go.dev/dl/go1.21.linux-amd64.tar.gz
-          sudo tar -C /usr/local -xzf go1.21.linux-amd64.tar.gz
-          echo "export PATH=$PATH:/usr/local/go/bin" >> $HOME/.bashrc
-          source $HOME/.bashrc
-          go install github.com/bazelbuild/buildtools/buildozer@latest
-          ~/go/bin/buildozer 'add module_outs drivers/block/zram/zram.ko mm/zsmalloc.ko' @//msm-kernel:pineapple_gki
+          sudo apt install -y python3 git curl 
+
 
       - name: Show selected inputs debug
         run: |
@@ -198,6 +190,10 @@ jobs:
           git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
           cd kernel_platform
+
+          cp ./common/modules.bzl ./common/modules.bzl.bak
+          cp ./msm-kernel/modules.bzl ./msm-kernel/modules.bzl.bak
+          
           echo "正在给内核打susfs补丁"
           cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch ./common/
           cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
@@ -254,6 +250,20 @@ jobs:
           cd kernel_workspace/kernel_platform
           CONFIG_FILE=./common/arch/arm64/configs/gki_defconfig
           KERNEL_VERSION="${{ github.event.inputs.KERNEL_VERSION }}"
+          
+          if [ "${{ github.event.inputs.ZRAM }}" = "true" ]; then
+            if [  -e ./msm-kernel/BUILD.bazel ]; then
+              if ! grep -q "mm/zsmalloc.ko" ./msm-kernel/BUILD.bazel; then
+                sed -i '/module_outs = \[/a \    "mm/zsmalloc.ko",\n    "drivers/block/zram/zram.ko",' ./msm-kernel/BUILD.bazel
+              fi
+            fi
+            
+          if [ "${{ github.event.inputs.ANDROID_VERSION }}" = "android14" ] || [ "${{ github.event.inputs.ANDROID_VERSION }}" = "android15" ]; then
+              # 📍 修复位置2：恢复modules.bzl配置
+              sed -i '/^_ARM64_GKI_MODULES_LIST = \[/a \    "mm/zsmalloc.ko",\n    "drivers/block/zram/zram.ko",' ./common/modules.bzl
+              sed -i '/^_ARM64_GKI_MODULES_LIST = \[/a \    "mm/zsmalloc.ko",\n    "drivers/block/zram/zram.ko",' ./msm-kernel/modules.bzl
+            fi
+          fi  
 
           # SukiSU Ultra config
           echo "CONFIG_KSU=y" >> "$CONFIG_FILE"
@@ -321,12 +331,12 @@ jobs:
 
             if [ "${{ github.event.inputs.ANDROID_VERSION }}" = "android14" ] || [ "${{ github.event.inputs.ANDROID_VERSION }}" = "android15" ]; then
               if [  -e ./common/modules.bzl ]; then
-                # sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "./common/modules.bzl"
+                sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "./common/modules.bzl"
                 sed -i '/^_ARM64_GKI_MODULES_LIST = \[/a \    "lib/zstdn/crypto_zstdn.ko",' "./common/modules.bzl"
               fi
 
               if [  -e ./msm-kernel/modules.bzl ]; then
-                # sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "./msm-kernel/modules.bzl"
+                sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "./msm-kernel/modules.bzl"
                 echo "CONFIG_ZSMALLOC=y" >> "msm-kernel/arch/arm64/configs/${{ github.event.inputs.CPUD }}-GKI.config"
                 echo "CONFIG_ZRAM=y" >> "msm-kernel/arch/arm64/configs/${{ github.event.inputs.CPUD }}-GKI.config"
               fi
@@ -351,6 +361,7 @@ jobs:
         if: ${{ github.event.inputs.CPU == 'sm8650' || github.event.inputs.CPU == 'sm7675' }}
         run: |
           cd kernel_workspace
+          export KMI_SYMBOL_LIST_STRICT_MODE=0
           ./kernel_platform/build_with_bazel.py -t ${{ github.event.inputs.CPUD }} ${{ github.event.inputs.BUILD_METHOD }}
           
       - name: Fallback build kernel
