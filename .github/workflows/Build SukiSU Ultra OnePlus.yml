@@ -126,7 +126,16 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update && sudo apt upgrade -y
-          sudo apt install -y python3 git curl
+          sudo apt install -y python3 git curl jq
+               
+      - name: Install buildozer and fix missing modules
+        run: |
+          curl -LO https://go.dev/dl/go1.21.linux-amd64.tar.gz
+          sudo tar -C /usr/local -xzf go1.21.linux-amd64.tar.gz
+          echo "export PATH=$PATH:/usr/local/go/bin" >> $HOME/.bashrc
+          source $HOME/.bashrc
+          go install github.com/bazelbuild/buildtools/buildozer@latest
+          ~/go/bin/buildozer 'add module_outs drivers/block/zram/zram.ko mm/zsmalloc.ko' @//msm-kernel:pineapple_gki
 
       - name: Show selected inputs debug
         run: |
@@ -240,7 +249,7 @@ jobs:
           fi
 
       # 配置信息
-      - name: Add Configuration Settings
+      - name: 添加 Configuration Settings
         run: |
           cd kernel_workspace/kernel_platform
           CONFIG_FILE=./common/arch/arm64/configs/gki_defconfig
@@ -312,12 +321,12 @@ jobs:
 
             if [ "${{ github.event.inputs.ANDROID_VERSION }}" = "android14" ] || [ "${{ github.event.inputs.ANDROID_VERSION }}" = "android15" ]; then
               if [  -e ./common/modules.bzl ]; then
-                sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "./common/modules.bzl"
+                # sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "./common/modules.bzl"
                 sed -i '/^_ARM64_GKI_MODULES_LIST = \[/a \    "lib/zstdn/crypto_zstdn.ko",' "./common/modules.bzl"
               fi
 
               if [  -e ./msm-kernel/modules.bzl ]; then
-                sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "./msm-kernel/modules.bzl"
+                # sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "./msm-kernel/modules.bzl"
                 echo "CONFIG_ZSMALLOC=y" >> "msm-kernel/arch/arm64/configs/${{ github.event.inputs.CPUD }}-GKI.config"
                 echo "CONFIG_ZRAM=y" >> "msm-kernel/arch/arm64/configs/${{ github.event.inputs.CPUD }}-GKI.config"
               fi
