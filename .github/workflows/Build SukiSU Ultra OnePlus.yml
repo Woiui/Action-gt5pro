@@ -351,6 +351,9 @@ jobs:
             sed -i '755s/\(name = "[^"]*"\), *\([^,)]*\)/\2, \1/' BUILD.bazel
             sed -i '756s/\(name = "[^"]*"\), *\([^,)]*\)/\2, \1/' BUILD.bazel
             sed -i 's/\(name = "[^"]*"\), *\([^,)]*\)/\2, \1/g' BUILD.bazel
+            
+            sed -i -r '46,81s/,([[:space:]]*\]?)/\1/g' BUILD.bazel
+            sed -i -r 's/(name = "[^"]*"),[[:space:]]*("[^"]*")/\2, \1/g' BUILD.bazel
           else
             echo "BUILD.bazel not found!"
             exit 1
