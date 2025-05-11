@@ -352,8 +352,11 @@ jobs:
             sed -i '756s/\(name = "[^"]*"\), *\([^,)]*\)/\2, \1/' BUILD.bazel
             sed -i 's/\(name = "[^"]*"\), *\([^,)]*\)/\2, \1/g' BUILD.bazel
             
-            sed -i -r '46,81s/,([[:space:]]*\]?)/\1/g' BUILD.bazel
-            sed -i -r 's/(name = "[^"]*"),[[:space:]]*("[^"]*")/\2, \1/g' BUILD.bazel
+            sed -i '47s/\(checkpatch_pl\)/\1,/' BUILD.bazel
+            sed -i '53s/\(actual\)/\1,/' BUILD.bazel
+            sed -i '63s/\(actual\)/\1,/' BUILD.bazel
+            sed -i '73s/\(out\)/\1,/' BUILD.bazel
+            sed -i '82s/\(out\)/\1,/' BUILD.bazel
           else
             echo "BUILD.bazel not found!"
             exit 1
