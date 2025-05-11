@@ -343,14 +343,14 @@ jobs:
             echo "BUILD.bazel not found!"
             exit 1
           fi
-
+          
       - name: Fix Bazel syntax in BUILD.bazel
         run: |
           cd kernel_workspace/kernel_platform/msm-kernel
           if [ -f BUILD.bazel ]; then
-            sed -i '755s/,//' BUILD.bazel
-            sed -i '756s/,//' BUILD.bazel
-            sed -i 's/(name = "[^"]*", *\([^,)]*\))/(\1, name = "\2")/g' BUILD.bazel
+            sed -i '755s/\(name = "[^"]*"\), *\([^,)]*\)/\2, \1/' BUILD.bazel
+            sed -i '756s/\(name = "[^"]*"\), *\([^,)]*\)/\2, \1/' BUILD.bazel
+            sed -i 's/\(name = "[^"]*"\), *\([^,)]*\)/\2, \1/g' BUILD.bazel
           else
             echo "BUILD.bazel not found!"
             exit 1
