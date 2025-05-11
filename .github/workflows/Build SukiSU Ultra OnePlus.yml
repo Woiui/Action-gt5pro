@@ -237,7 +237,7 @@ jobs:
           fi
 
       # 配置信息
-      - name: Add Configuration Settings
+      - name: 添加 Configuration Settings
         run: |
           cd kernel_workspace/kernel_platform
           CONFIG_FILE=./common/arch/arm64/configs/gki_defconfig
@@ -331,7 +331,19 @@ jobs:
               echo "CONFIG_CRYPTO_842=y" >> "$CONFIG_FILE"
             fi
           fi
-
+          
+      - name: Fix missing module_outs in Bazel config
+        run: |
+          cd kernel_workspace/kernel_platform/msm-kernel
+          if [ -f BUILD.bazel ]; then
+            if ! grep -q "drivers/block/zram/zram.ko" BUILD.bazel; then
+              sed -i '/module_outs = \[/a \    "drivers/block/zram/zram.ko",\n    "mm/zsmalloc.ko",' BUILD.bazel
+            fi
+          else
+            echo "BUILD.bazel not found!"
+            exit 1
+          fi
+      
       - name: Build kernel
         if: ${{ github.event.inputs.CPU == 'sm8650' || github.event.inputs.CPU == 'sm7675' }}
         run: |
