@@ -348,10 +348,15 @@ jobs:
         run: |
           cd kernel_workspace/kernel_platform/msm-kernel
           if [ -f BUILD.bazel ]; then
-            sed -i 's/,,/,/g' BUILD.bazel
-            sed -i -r 's/([a-zA-Z0-9_]+)(name[[:space:]]*=[[:space:]]*")/\1, \2/g' BUILD.bazel
-            sed -i -r 's/(actual|out|srcs|hdrs|kernel_build)([a-zA-Z0-9_"]+)/\1, \2/g' BUILD.bazel
-            sed -i 's/,\([[:space:]]*[a-zA-Z]\)/,\n\1/g' BUILD.bazel
+            # 修复未闭合字符串和列表
+            sed -i -r 's/(srcs = \[[^]]*$)/\1]/g' BUILD.bazel
+            sed -i -r 's/("[^"]*$)/\1"/g' BUILD.bazel
+            sed -i -r 's/(name = "[^"]*$)/\1")/g' BUILD.bazel
+            # 修复缩进
+            sed -i 's/\t/    /g' BUILD.bazel
+            sed -i -r 's/^([[:space:]]{1,3})([a-z])/    \2/g' BUILD.bazel
+            # 替换非法字符
+            sed -i 's/`/"/g' BUILD.bazel
           else
             echo "BUILD.bazel not found!"
             exit 1
@@ -360,12 +365,16 @@ jobs:
       - name: Validate BUILD.bazel syntax
         run: |
           cd kernel_workspace/kernel_platform/msm-kernel
-          if grep -Pzo "[a-zA-Z0-9_]+name =" BUILD.bazel; then
-            echo "参数分隔符缺失！"
+          if grep -Pq '("[^"]*$)|(\[([^]]|]*[^]])$)' BUILD.bazel; then
+            echo "语法错误：存在未闭合的字符串或列表！"
             exit 1
           fi
-          if grep -q ",," BUILD.bazel; then
-            echo "存在连续逗号！"
+          if grep -q '`' BUILD.bazel; then
+            echo "语法错误：存在非法反引号字符！"
+            exit 1
+          fi
+          if grep -Pq '^\t|^ {1,3}[^ ]' BUILD.bazel; then
+            echo "语法错误：存在缩进问题！"
             exit 1
           fi
 
@@ -374,7 +383,7 @@ jobs:
         run: |
           cd kernel_workspace
           ./kernel_platform/build_with_bazel.py -t ${{ github.event.inputs.CPUD }} ${{ github.event.inputs.BUILD_METHOD }}
-          
+
       - name: Fallback build kernel
         if: ${{ github.event.inputs.CPU != 'sm8650' && github.event.inputs.CPU != 'sm7675' }}
         run: |
