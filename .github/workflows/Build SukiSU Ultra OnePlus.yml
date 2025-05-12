@@ -343,22 +343,30 @@ jobs:
             echo "BUILD.bazel not found!"
             exit 1
           fi
-          
+
       - name: Fix Bazel syntax in BUILD.bazel
         run: |
           cd kernel_workspace/kernel_platform/msm-kernel
           if [ -f BUILD.bazel ]; then
-            sed -i '755s/\(name = "[^"]*"\), *\([^,)]*\)/\2, \1/' BUILD.bazel
-            sed -i '756s/\(name = "[^"]*"\), *\([^,)]*\)/\2, \1/' BUILD.bazel
-            sed -i 's/\(name = "[^"]*"\), *\([^,)]*\)/\2, \1/g' BUILD.bazel
-            
-            sed -i '47s/\(checkpatch_pl\)/\1,/' BUILD.bazel
-            sed -i '53s/\(actual\)/\1,/' BUILD.bazel
-            sed -i '63s/\(actual\)/\1,/' BUILD.bazel
-            sed -i '73s/\(out\)/\1,/' BUILD.bazel
-            sed -i '82s/\(out\)/\1,/' BUILD.bazel
+            sed -i -r 's/(name = "[^"]*")([^\n,]*)/\1,\2/g' BUILD.bazel
+            sed -i -r 's/(checkpatch_pl)([^\n,]*)/\1,\2/g' BUILD.bazel
+            sed -i -r 's/(actual)([^\n,]*)/\1,\2/g' BUILD.bazel
+            sed -i -r 's/(out)([^\n,]*)/\1,\2/g' BUILD.bazel
+            sed -i -r 's/(name = "[^"]*"),[[:space:]]*("[^"]*")/\2, \1/g' BUILD.bazel
           else
             echo "BUILD.bazel not found!"
+            exit 1
+          fi
+
+      - name: Validate BUILD.bazel syntax
+        run: |
+          cd kernel_workspace/kernel_platform/msm-kernel
+          if grep -Pzo "name = .*\n[^,]*[^,]" BUILD.bazel; then
+            echo "参数分隔符缺失！"
+            exit 1
+          fi
+          if grep -q ",[[:space:]]*)" BUILD.bazel; then
+            echo "列表末尾存在多余逗号！"
             exit 1
           fi
 
