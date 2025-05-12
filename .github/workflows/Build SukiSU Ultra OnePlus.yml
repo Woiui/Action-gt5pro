@@ -348,11 +348,10 @@ jobs:
         run: |
           cd kernel_workspace/kernel_platform/msm-kernel
           if [ -f BUILD.bazel ]; then
-            sed -i -r 's/(name = "[^"]*")([^\n,]*)/\1,\2/g' BUILD.bazel
-            sed -i -r 's/(checkpatch_pl)([^\n,]*)/\1,\2/g' BUILD.bazel
-            sed -i -r 's/(actual)([^\n,]*)/\1,\2/g' BUILD.bazel
-            sed -i -r 's/(out)([^\n,]*)/\1,\2/g' BUILD.bazel
-            sed -i -r 's/(name = "[^"]*"),[[:space:]]*("[^"]*")/\2, \1/g' BUILD.bazel
+            sed -i 's/,,/,/g' BUILD.bazel
+            sed -i -r 's/([a-zA-Z0-9_]+)(name[[:space:]]*=[[:space:]]*")/\1, \2/g' BUILD.bazel
+            sed -i -r 's/(actual|out|srcs|hdrs|kernel_build)([a-zA-Z0-9_"]+)/\1, \2/g' BUILD.bazel
+            sed -i 's/,\([[:space:]]*[a-zA-Z]\)/,\n\1/g' BUILD.bazel
           else
             echo "BUILD.bazel not found!"
             exit 1
@@ -361,12 +360,12 @@ jobs:
       - name: Validate BUILD.bazel syntax
         run: |
           cd kernel_workspace/kernel_platform/msm-kernel
-          if grep -Pzo "name = .*\n[^,]*[^,]" BUILD.bazel; then
+          if grep -Pzo "[a-zA-Z0-9_]+name =" BUILD.bazel; then
             echo "参数分隔符缺失！"
             exit 1
           fi
-          if grep -q ",[[:space:]]*)" BUILD.bazel; then
-            echo "列表末尾存在多余逗号！"
+          if grep -q ",," BUILD.bazel; then
+            echo "存在连续逗号！"
             exit 1
           fi
 
