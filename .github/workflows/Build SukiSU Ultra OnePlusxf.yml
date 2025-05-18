@@ -388,7 +388,7 @@ jobs:
           cd kernel_workspace/kernel_platform
           go install github.com/bazelbuild/buildtools/buildozer@latest
           export PATH="$PATH:$(go env GOPATH)/bin"
-          buildozer 'add module_outs drivers/block/zram/zram.ko mm/zsmalloc.ko' @//msm-kernel:pineapple_gki
+          buildozer "add module_outs drivers/block/zram/zram.ko mm/zsmalloc.ko" @//msm-kernel:${{ github.event.inputs.CPUD }}_gki
 
       - name: Build kernel
         if: ${{ github.event.inputs.CPU == 'sm8650' || github.event.inputs.CPU == 'sm7675' }}
